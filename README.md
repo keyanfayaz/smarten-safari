@@ -16,6 +16,10 @@ python3 -m safari_tabs doctor
 python3 -m safari_tabs groups
 python3 -m safari_tabs tabs --source groups --group 'Work' --format titles
 python3 -m safari_tabs tabs --source groups --group-id 123 --search github
+python3 -m safari_tabs profiles
+python3 -m safari_tabs tabs --source groups --group 'Tools' --profile-id PROFILE_ID
+python3 -m safari_tabs session
+python3 -m safari_tabs tabs --source session --stored-window-id STORED_WINDOW_ID
 
 python3 -m safari_tabs devices
 python3 -m safari_tabs tabs --source icloud
@@ -33,8 +37,10 @@ The default source for `tabs` is `windows`; source-specific filters require thei
 | Source | Method | What it can tell you |
 | --- | --- | --- |
 | `windows` | JXA through `osascript`, using Safari's Apple Events dictionary | Tabs exposed by each currently open window's selected group |
-| `groups` | Read-only SQLite query of `SafariTabs.db` | Stored tab containers and their direct tab children, including inactive named groups |
+| `groups` | Read-only SQLite query of `SafariTabs.db` | Named groups and their tabs, including inactive groups, with profile IDs on the observed profiled schema |
 | `icloud` | Read-only SQLite query of `CloudTabs.db` | Cached tabs by synced device ID/name |
+| `profiles` | Read-only query of stored profile relationships | Profile IDs/names and tabs in their named groups |
+| `session` | Read-only query of stored windows and active groups | Stored window UUIDs, active group/profile IDs, privacy flags, and stored tabs |
 
 The windows adapter makes one subprocess call and bulk-reads titles and URLs per window.
 It requires two consecutive matching observations within at most three samples, under a 30-second
@@ -53,16 +59,27 @@ The database adapters use a read transaction and `mode=ro`; they do not execute 
 missing databases. They read committed WAL data rather than using `immutable=1`, which can miss
 recent changes. SQLite may still need access to its WAL/shared-memory sidecar files.
 
-The groups adapter is deliberately experimental: it treats `bookmarks.type = 1` rows as containers
-and associates tabs with their direct parent. Internal folders and profile containers may appear
-alongside named groups. Nested/pinned containers are separate scopes, not merged into their ancestors.
-It excludes deleted/closed records and descendants when those state columns exist, and warns if
-they do not. The supported ancestry layout terminates at parent `0` or `NULL`; cycles and orphaned
-containers are excluded. Safari's undocumented schema can change, so inspect it before extending
-the mapping. This is not a guaranteed complete inventory of every Safari profile or private tab.
+The groups adapter recognizes the observed profiled layout: visible subtype-0 folders under the root
+or a subtype-2 profile are named groups. Recovered, hidden, device, and auxiliary containers are
+excluded from the inventory. Auxiliary child-container tabs are included with an ordering warning
+if present. `DefaultProfile` identifies the default profile, whose unnamed stored title is displayed
+as "Default profile". Reduced schemas retain the older experimental container output with warnings.
+Deleted/closed records, invalid ancestors, cycles, and orphans are excluded where the schema permits.
+Safari's undocumented schema can change; field compatibility alone does not establish completeness.
+
+The `session` source follows `windows.active_tab_group_id` and `active_profile_id` directly.
+Its IDs are SQLite window IDs, distinct from live Apple Events IDs; it also returns stored window UUIDs.
+These persisted records can lag live Safari, including titles and private-tab URLs. Use `windows`
+for current observations. Default-profile global pinned tabs are included per stored window;
+profile/group-specific pin layouts are not fully established. A stored relationship is never inferred
+from matching titles or URLs. Profile tab counts cover named groups; session tabs are a separate view.
+The profiled reader retains Start Page tabs even when their URL is empty.
 
 iCloud results describe a local sync cache, not the current state of a remote device. Named groups
 sync across devices and are not assigned to a device here. Remote window membership is not inferred.
+Device type identifiers help distinguish devices with the same name. The reader supports numeric
+ordering ranks and the observed single-component zlib/JSON `sortValues` format; unknown or composite
+ranks become `null` and use stable ID order with a warning. Binary data is never emitted into JSON.
 The CLI does not deduplicate records across sources: matching URLs are not proof of identical tabs.
 
 ## Device discovery
@@ -91,7 +108,9 @@ identify the project, not the account or devices it queries.
 
 JSON is the default. It includes `source`, `collected_at` (UTC collection time, not sync freshness),
 `elapsed_ms` (adapter time), `warnings`, and `scopes`; the `tabs` command also includes `tabs`.
-Each tab has an `id`, `scope_id`, `title`, `url`, and optional `position` value.
+Each tab has an `id`, `scope_id`, `title`, `url`, and optional `position`, `group_id`, and `pinned` values.
+Scopes may include source-specific profile, group, device-type, privacy, and stored-window UUID fields.
+Profiled database results include a `context` with profile identifiers and names.
 IDs are strings and meaningful only within their source/database. Position values follow each source's
 convention; windows use one-based indices. Titles and URLs can be null.
 
@@ -113,7 +132,7 @@ successful empty result. Source failures return status 1; invalid arguments retu
 
 ## Access and local experiments
 
-Run `python3 -m safari_tabs doctor` to check all three sources in the current process context.
+Run `python3 -m safari_tabs doctor` to check all five sources in the current process context.
 It returns counts, availability, error codes, and coverage limits without printing browsing records.
 It exits with status 1 if any source is unavailable, while preserving the other sources' results.
 An available source means the reader succeeded; it does not establish complete coverage.

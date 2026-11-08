@@ -1,6 +1,6 @@
 """Shared output contract for independently replaceable adapters."""
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 
 class QueryError(Exception):
@@ -18,6 +18,18 @@ class Scope:
     id: str
     name: str
     kind: str
+    profile_id: str | None = None
+    profile_name: str | None = None
+    group_id: str | None = None
+    group_name: str | None = None
+    window_uuid: str | None = None
+    is_private: bool | None = None
+    device_type: str | None = None
+
+
+def scope_dict(scope: Scope) -> dict:
+    """Keep optional source-specific relationships out of unrelated scope records."""
+    return {key: value for key, value in asdict(scope).items() if value is not None}
 
 
 @dataclass
@@ -29,6 +41,8 @@ class Tab:
     title: str | None
     url: str | None
     position: int | float | None = None
+    group_id: str | None = None
+    pinned: bool | None = None
 
 
 @dataclass
@@ -39,3 +53,4 @@ class Snapshot:
     scopes: list[Scope] = field(default_factory=list)
     tabs: list[Tab] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    context: dict = field(default_factory=dict)

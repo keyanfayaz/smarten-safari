@@ -42,11 +42,25 @@ This establishes that inactive group titles can be obtained through the UI. It d
 reliable CLI adapter, complete coverage of other profiles, or URL availability from those rows.
 Accessibility IDs and layout can change between observations; reacquire them after each UI action.
 
-## Database access remains separate
+## Database validation after permission grant
 
-The database adapters have fixture tests, not live validation on this machine. Full Disk Access for
-the host application may be required; ordinary unsandboxed execution did not resolve `EPERM`.
-No permissions were changed, and no protected data was copied through an alternate process.
+On November 8, 2026, the user approved ChatGPT Full Disk Access and authenticated in System Settings.
+Both the coding host and existing private tunnel could then read the two Safari databases.
+No database writes, protected-file copies through alternate processes, or broad filesystem scans were used.
 
-After the user grants access, inspect the actual schema first, then compare one named group's results
-against Safari's sidebar before trusting the experimental parent/child mapping more broadly.
+| Check | Observation |
+| --- | --- |
+| Raw container inventory | 116 containers / 491 nonempty-URL tab records; includes internal records and is not a named-group count |
+| Profiled classification | 39 named groups / 459 tabs across 4 stored profiles, including 10 Start Page tabs with empty URLs |
+| Default-profile sidebar | All 20 visible named-group counts agreed with the classified database records |
+| Inactive-group title check | All 8 titles and their order matched the sidebar; group and sidebar restored afterward |
+| Synced devices | 6 device records / 329 cached tabs at observation time, including the current Mac and two same-name phones |
+| iCloud serialization | Actual position fields were zlib-compressed JSON, requiring rank decoding before JSON output |
+| Stored session | 4 stored window records / 30 tab entries; explicit group/profile links were readable |
+| Stored versus live windows | The three normal windows had matching URL multisets but one stale title each; the private window's stored URLs differed |
+| Installed MCP 0.4.1 | All five sources available; four tools advertised; actual ChatGPT queries returned group/device titles and profile/session inventories |
+| Live-window verification | JXA and independent AppleScript agreed on 4 windows / 30 tabs; one initial tunnel call timed out, and the sequential retry succeeded |
+
+The stored-window observations establish persistence relationships, not live identity or freshness.
+The snapshot is not a completeness guarantee for every device, profile-specific pin layout, or Safari version.
+All committed regression fixtures remain synthetic.

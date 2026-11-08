@@ -7,22 +7,21 @@ at runtime. Synthetic tests establish adapter behavior, not coverage of a live S
 | Capability | Current evidence | Required completion check |
 | --- | --- | --- |
 | Local window tab names and optional URLs | Live CLI and ChatGPT reads; independent JXA/AppleScript agreement | Keep both checks passing after releases |
-| Search, filters, and bounded MCP pages | Live window checks and offline tests | Exercise real group/device collections after access is available |
+| Search, filters, and bounded MCP pages | Live window/group/device checks and offline tests | Keep representative host queries passing after releases |
 | Availability and meaningful errors | CLI doctor and MCP coverage check | Run from each installed host, since permissions differ |
-| Named groups and inactive group tabs | Fixture-tested container adapter; separate UI observations | Inspect live schema, distinguish named groups from internal containers, compare representative empty/nonempty/inactive groups with Safari |
-| Group-to-window association | Not implemented | Identify stored stable keys or an authorized read-only UI interface; verify mappings against live windows, including duplicate group names and pinned tabs |
-| Synced device discovery and tabs | Fixture-tested cache adapter, including additions and pagination | Compare live discovered devices and tab titles with Safari's iCloud view; retain IDs for duplicate names |
-| Safari profiles | Not established | Discover profile metadata from observed storage, preserve profile identity in results and filters, verify across profiles |
+| Named groups and inactive group tabs | Live profiled classification; default-profile sidebar counts and an inactive group's titles matched | Broaden representative checks to other Safari versions and auxiliary pin layouts |
+| Group-to-window association | Implemented from stored window/group/profile keys through the session source | A separate authoritative live Apple Events ID to stored UUID bridge remains unresolved; stored titles/URLs can lag |
+| Synced device discovery and tabs | Live device inventory and JSON-safe tab queries; automatic discovery fixtures | Continue checking sync freshness and unsupported ordering formats; retain device IDs for duplicate names |
+| Safari profiles | Four stored profiles discovered; named-group profile filters implemented | Profile-specific pinned/default-device containers are not completely mapped |
 | Persistence across login | Tunnel currently runs as a managed process | Install automatic startup only with explicit user authorization, then test restart behavior |
 
 ## Next validation sequence
 
-1. Obtain the intended macOS file-access grant for the coding host, with the user's consent.
-2. Run `doctor`, then `schema --source groups` and `schema --source icloud`; inspect definitions before interpreting additional fields.
-3. Correct adapters against the observed schemas and add synthetic regression fixtures without personal browsing records.
-4. Compare group/device results with Safari's normal interface without opening, closing, or moving tabs.
-5. Implement group/window/profile relationships only where an observed key or interface supports them; report unknown/ambiguous relationships explicitly.
-6. Build and install the versioned package, verify the tunnel runtime's own access, refresh host tool discovery, and repeat representative queries through ChatGPT.
+1. Keep `doctor` and representative queries passing from both the CLI and installed ChatGPT connection.
+2. Validate profile-specific pins and default-device containers against Safari before extending classification.
+3. Establish an authoritative live-window identity bridge before equating stored windows with Apple Events IDs.
+4. Test other Safari schemas with synthetic regression fixtures; keep personal browsing records out of source control.
+5. Refresh host tool discovery whenever the MCP schema changes, then repeat representative queries through ChatGPT.
 
 ## Limits to preserve
 

@@ -8,15 +8,17 @@ import json
 import sys
 from time import perf_counter
 
-from .adapters import groups, icloud, windows
+from .adapters import catalog, groups, icloud, windows
 from .coverage import check as check_coverage
 from .database import inspect_schema
-from .model import QueryError
+from .model import QueryError, scope_dict
 from .verification import verify
 
 
-ADAPTERS = {"windows": windows.read, "groups": groups.read, "icloud": icloud.read}
-INVENTORIES = {"windows": "windows", "groups": "groups", "devices": "icloud"}
+ADAPTERS = {"windows": windows.read, "groups": groups.read, "icloud": icloud.read,
+            "profiles": catalog.read_profiles, "session": catalog.read_session}
+INVENTORIES = {"windows": "windows", "groups": "groups", "devices": "icloud",
+               "profiles": "profiles", "session": "session"}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -27,12 +29,14 @@ def parser() -> argparse.ArgumentParser:
     commands.add_parser("doctor", help="Check source availability and limits without printing browsing content")
     tabs = commands.add_parser("tabs", help="List tab titles, URLs, and source-local scope IDs")
     tabs.add_argument("--source", choices=ADAPTERS, default="windows")
-    tabs.add_argument("--db", help="Explicit SQLite file (groups/icloud only)")
+    tabs.add_argument("--db", help="Explicit SQLite file (database sources only)")
     tabs.add_argument("--window-id", help="Exact local window ID")
     tabs.add_argument("--group", help="Exact stored group/container name")
     tabs.add_argument("--group-id", help="Exact stored group/container ID")
     tabs.add_argument("--device", help="Exact synced device name")
     tabs.add_argument("--device-id", help="Exact synced device UUID")
+    tabs.add_argument("--profile-id", help="Exact discovered profile ID (groups/profiles/session)")
+    tabs.add_argument("--stored-window-id", help="Exact stored window ID (session source)")
     tabs.add_argument("--search", help="Case-insensitive substring in titles or URLs")
     tabs.add_argument("--format", choices=("json", "titles", "urls"), default="json")
     for command in INVENTORIES:
@@ -52,13 +56,15 @@ def main(argv: list[str] | None = None) -> int:
     source = args.source if args.command in ("tabs", "schema") else INVENTORIES.get(args.command)
     path = getattr(args, "db", None)
     if source == "windows" and path is not None:
-        arguments.error("--db requires --source groups or icloud")
+        arguments.error("--db requires a database source: groups, icloud, profiles, or session")
     if args.command == "tabs":
         allowed = {"window_id": "windows", "group": "groups", "group_id": "groups",
-                   "device": "icloud", "device_id": "icloud"}
+                   "device": "icloud", "device_id": "icloud", "stored_window_id": "session"}
         for option, expected in allowed.items():
             if getattr(args, option) is not None and source != expected:
                 arguments.error(f"--{option.replace('_', '-')} requires --source {expected}")
+        if args.profile_id is not None and source not in ("groups", "profiles", "session"):
+            arguments.error("--profile-id requires --source groups, profiles, or session")
     try:
         if args.command == "doctor":
             report = check_coverage(ADAPTERS)
@@ -74,12 +80,13 @@ def main(argv: list[str] | None = None) -> int:
         snapshot = ADAPTERS[source]() if source == "windows" else ADAPTERS[source](path)
         elapsed = round((perf_counter() - started) * 1000, 2)
         if args.command == "tabs":
-            scope_id = next((value for value in (args.window_id, args.group_id, args.device_id)
+            scope_id = next((value for value in (args.window_id, args.group_id, args.device_id, args.stored_window_id)
                              if value is not None), None)
             name = args.group if args.group is not None else args.device
             scopes = [scope for scope in snapshot.scopes
                       if (scope_id is None or scope.id == scope_id)
-                      and (name is None or scope.name == name)]
+                      and (name is None or scope.name == name)
+                      and (args.profile_id is None or scope.profile_id == args.profile_id)]
             scope_ids = {scope.id for scope in scopes}
             search = (args.search or "").casefold()
             tabs = [tab for tab in snapshot.tabs if tab.scope_id in scope_ids
@@ -93,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
                     print((value or "").replace("\r", " ").replace("\n", " "))
                 return 0
         output = asdict(snapshot)
+        output["scopes"] = [scope_dict(scope) for scope in snapshot.scopes]
         counts = Counter(tab.scope_id for tab in snapshot.tabs)
         for scope in output["scopes"]:
             scope["tab_count"] = counts[scope["id"]]

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ..database import database_path, open_database, require_columns
 from ..model import Scope, Snapshot, Tab
+from . import catalog
 
 
 def read(path: str | Path | None = None) -> Snapshot:
@@ -14,6 +15,8 @@ def read(path: str | Path | None = None) -> Snapshot:
     ])
     with open_database(database_path("groups", path)) as connection:
         available = require_columns(connection, "bookmarks", {"id", "parent", "type", "title", "url"})
+        if catalog.PROFILE_COLUMNS <= available:
+            return catalog.collect(connection)
         conditions = []
         if "deleted" in available:
             conditions.append("COALESCE(deleted, 0) = 0")

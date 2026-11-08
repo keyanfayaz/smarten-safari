@@ -64,7 +64,8 @@ class CLITests(unittest.TestCase):
         self.assertIn("Fixture warning", error)
 
     def test_wrong_source_filters_and_database_fail_before_query(self):
-        for args in (("--group", "Work"), ("--device", "Phone"), ("--db", "file.db")):
+        for args in (("--group", "Work"), ("--device", "Phone"), ("--db", "file.db"),
+                     ("--profile-id", "1"), ("--stored-window-id", "1")):
             with self.subTest(args=args), redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit) as error:
                     main(["tabs", *args])
@@ -83,7 +84,7 @@ class CLITests(unittest.TestCase):
         def denied():
             raise QueryError("Permission denied", "permission_denied")
 
-        with patch.dict("safari_tabs.cli.ADAPTERS", {"windows": self.snapshot, "groups": denied, "icloud": denied}):
+        with patch.dict("safari_tabs.cli.ADAPTERS", {"windows": self.snapshot, "groups": denied, "icloud": denied}, clear=True):
             code, out, error = self.call("doctor")
         self.assertEqual(code, 1)
         self.assertEqual(error, "")

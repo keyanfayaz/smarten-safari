@@ -101,7 +101,8 @@ class MCPTests(unittest.TestCase):
     def test_invalid_args_rejected_before_access(self):
         cases = [{"limit": 51}, {"limit": True}, {"offset": -1}, {"source": "private-files"},
                  {"db": "/private/file"}, {"command": "anything"}, {"scope_id": ""},
-                 {"search": "a" * 257}, {"include_urls": "true"}, {"limit": 0}]
+                 {"search": "a" * 257}, {"include_urls": "true"}, {"limit": 0},
+                 {"profile_id": "1"}, {"source": "icloud", "profile_id": "1"}]
         with patch.dict(mcp.ADAPTERS, {"windows": lambda: self.fail("Unexpected read")}):
             for args in cases:
                 with self.subTest(args=args):
@@ -119,7 +120,7 @@ class MCPTests(unittest.TestCase):
         def denied():
             raise QueryError("Permission denied", "permission_denied")
 
-        with patch.dict(mcp.ADAPTERS, {"windows": self.snapshot, "groups": denied, "icloud": denied}):
+        with patch.dict(mcp.ADAPTERS, {"windows": self.snapshot, "groups": denied, "icloud": denied}, clear=True):
             result = self.request("get_safari_coverage")["result"]
         self.assertFalse(result["isError"])
         self.assertEqual(result["structuredContent"]["status"], "partial")

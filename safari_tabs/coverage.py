@@ -12,12 +12,17 @@ LIMITATIONS = {
         "Window IDs are not mapped to named Tab Groups or Safari profiles.",
     ],
     "groups": [
-        "The experimental private schema includes internal containers as well as named groups.",
-        "Reading a supported schema does not establish complete group or profile coverage.",
+        "Profiled schemas distinguish named groups; reduced schemas retain experimental container output.",
+        "Classification uses observed private-schema fields and is version-dependent.",
     ],
     "icloud": [
         "Devices are discovered from the local sync cache; remote liveness and sync freshness are unknown.",
         "Remote window membership and complete Apple Account device coverage are unavailable.",
+    ],
+    "profiles": ["Profiles come from stored subtype-2 records; tab counts cover named groups."],
+    "session": [
+        "Stored window/group/profile relationships may describe a previous session.",
+        "Stored IDs are not mapped to live Apple Events window IDs; pinned-tab coverage varies by profile.",
     ],
 }
 
@@ -43,6 +48,7 @@ def check(adapters: dict) -> dict:
         "limitations": [
             "Availability means a read succeeded, not that every requested capability is implemented.",
             "Sources are separate observations; collected_at is not an iCloud sync timestamp.",
+            "Sources overlap; do not sum their tab counts into a unique global total.",
             "Private-browsing exclusion and complete profile coverage are not established.",
         ],
     }

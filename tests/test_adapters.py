@@ -5,6 +5,7 @@ import sqlite3
 import subprocess
 import tempfile
 import unittest
+import zlib
 from unittest.mock import patch
 
 from safari_tabs.adapters import groups, icloud, windows
@@ -88,6 +89,31 @@ class SQLiteAdaptersTests(unittest.TestCase):
             db.execute("CREATE TABLE cloud_tabs (tab_uuid TEXT, device_uuid TEXT, title TEXT, url TEXT)")
             db.execute("INSERT INTO cloud_tabs VALUES ('t', 'd', 'Title', 'https://example.test')")
         self.assertIsNone(icloud.read(self.path).tabs[0].position)
+
+    def test_compressed_icloud_positions_are_sorted_and_json_safe(self):
+        def rank(value):
+            return zlib.compress(json.dumps({"sortValues":[{"sortValue":value,"changeID":0,
+                                                           "deviceIdentifier":"synthetic"}]}).encode())
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute("CREATE TABLE cloud_tab_devices (device_uuid TEXT,device_name TEXT,device_type_identifier TEXT)")
+            db.execute("CREATE TABLE cloud_tabs (tab_uuid TEXT,device_uuid TEXT,title TEXT,url TEXT,position BLOB)")
+            db.execute("INSERT INTO cloud_tab_devices VALUES ('phone','Phone','synthetic.phone')")
+            db.executemany("INSERT INTO cloud_tabs VALUES (?,'phone',?,'https://example.test',?)", [
+                ("a","Later",rank(20)), ("z","Earlier",rank(10)), ("unknown","Unknown",b"opaque"),
+            ])
+        snapshot = icloud.read(self.path)
+        self.assertEqual([tab.title for tab in snapshot.tabs], ["Earlier","Later","Unknown"])
+        self.assertEqual(snapshot.scopes[0].device_type, "synthetic.phone")
+        self.assertTrue(any("unsupported" in warning for warning in snapshot.warnings))
+        from dataclasses import asdict
+        json.dumps(asdict(snapshot), allow_nan=False)
+
+    def test_unknown_large_and_multicomponent_ranks_remain_unknown(self):
+        values = [True, float("nan"), b"not compressed", zlib.compress(b"x" * 100_000),
+                  zlib.compress(b'{"sortValues":[{"sortValue":1},{"sortValue":2}]}')]
+        for value in values:
+            with self.subTest(value_type=type(value).__name__):
+                self.assertIsNone(icloud.decode_position(value))
 
 
 @patch("safari_tabs.adapters.windows.sys.platform", "darwin")

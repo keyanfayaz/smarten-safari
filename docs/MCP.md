@@ -9,7 +9,8 @@ The dependency-free MCP server uses stdio and exposes four read-only tools:
 | `verify_safari_windows` | Independent AppleScript/JXA comparison, returning counts and timing only |
 | `get_safari_coverage` | Current per-source availability, counts, structured errors, and coverage limits |
 
-Sources are `windows` (default), `groups`, and `icloud`. Pages default to 20 records, at most 50.
+Sources are `windows` (default), `groups`, `icloud`, `profiles`, and `session`.
+Pages default to 20 records, at most 50.
 URLs are omitted unless `include_urls: true`. There is no file path, SQL, command, navigation, or
 mutation argument. Source collection is not limited to the output page; the adapter may read an entire
 local collection before filtering. Pagination uses fresh observations, so changes can shift offsets.
@@ -41,6 +42,20 @@ Call `read_safari_tabs` with `{"source": "icloud"}` to read across discovered de
 `scope_id` returned by discovery to select one. Names may change or be duplicated. Each request reads
 the cache again, so newly synced devices need no server restart or configuration edit.
 An unreadable cache remains an error, and a readable cache is not a complete Apple Account inventory.
+
+## Profiles and stored relationships
+
+`list_safari_scopes({"source":"profiles"})` discovers stored profiles; tab counts cover named groups.
+`read_safari_tabs({"source":"groups","scope_name":"Tools","profile_id":"PROFILE_ID"})`
+selects a group within one profile, so duplicate group names are unambiguous.
+The profiled group source also includes profile IDs/names on each scope and in its context.
+
+`list_safari_scopes({"source":"session"})` returns stored windows with `group_id`, `group_name`,
+`profile_id`, `profile_name`, `window_uuid`, and `is_private` when available.
+Use its returned `scope_id` with `read_safari_tabs` and the same `session` source.
+These are persisted relationships, not a live-window-ID mapping; titles and URLs may lag the live
+`windows` source. Default-profile global pinned tabs are included, while other pin layouts remain
+unverified. Never equate SQLite window IDs with Apple Events IDs or infer a relationship from URLs.
 
 ## Local stdio
 
