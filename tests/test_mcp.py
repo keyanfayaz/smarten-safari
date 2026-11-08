@@ -1,7 +1,10 @@
+from contextlib import closing
 import json
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -56,6 +59,44 @@ class MCPTests(unittest.TestCase):
             data = self.request("list_safari_scopes")["result"]["structuredContent"]
         self.assertEqual([scope["tab_count"] for scope in data["scopes"]], [55, 5])
         self.assertNotIn("Café", json.dumps(data))
+
+    def test_icloud_discovers_devices_across_pages_and_refreshes_without_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            cache = home / "Library/Safari/CloudTabs.db"
+            cache.parent.mkdir(parents=True)
+            devices = [(f"device-{i}", f"Device {i}") for i in range(61)]
+            with closing(sqlite3.connect(cache)) as db, db:
+                db.execute("CREATE TABLE cloud_tab_devices (device_uuid TEXT, device_name TEXT)")
+                db.execute("CREATE TABLE cloud_tabs (tab_uuid TEXT, device_uuid TEXT, title TEXT, url TEXT)")
+                db.executemany("INSERT INTO cloud_tab_devices VALUES (?, ?)", devices)
+            with patch("safari_tabs.database.Path.home", return_value=home):
+                found, offset = [], 0
+                for _ in range(4):
+                    page = self.request("list_safari_scopes", {"source": "icloud", "offset": offset})[
+                        "result"]["structuredContent"]
+                    self.assertEqual(page["total_matching"], 61)
+                    self.assertLessEqual(len(page["scopes"]), 20)
+                    found.extend(page["scopes"])
+                    offset = page["next_offset"]
+                    if offset is None:
+                        break
+                self.assertIsNone(offset)
+                self.assertEqual(len(found), 61)
+                self.assertEqual({scope["id"] for scope in found}, {device[0] for device in devices})
+                self.assertTrue(all(scope["tab_count"] == 0 for scope in found))
+
+                with closing(sqlite3.connect(cache)) as db, db:
+                    db.execute("INSERT INTO cloud_tab_devices VALUES ('new-device', 'New device')")
+                    db.execute("INSERT INTO cloud_tabs VALUES ('new-tab', 'new-device', 'Example', 'https://example.test')")
+                refreshed = self.request("list_safari_scopes", {"source": "icloud", "offset": 60})[
+                    "result"]["structuredContent"]
+                self.assertEqual(refreshed["total_matching"], 62)
+                self.assertIn({"id": "new-device", "name": "New device", "kind": "device", "tab_count": 1},
+                              refreshed["scopes"])
+                tabs = self.request("read_safari_tabs", {"source": "icloud"})["result"]["structuredContent"]
+                self.assertEqual([(tab["scope_id"], tab["title"]) for tab in tabs["tabs"]],
+                                 [("new-device", "Example")])
 
     def test_invalid_args_rejected_before_access(self):
         cases = [{"limit": 51}, {"limit": True}, {"offset": -1}, {"source": "private-files"},

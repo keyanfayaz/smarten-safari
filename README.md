@@ -17,6 +17,7 @@ python3 -m safari_tabs tabs --source groups --group 'Work' --format titles
 python3 -m safari_tabs tabs --source groups --group-id 123 --search github
 
 python3 -m safari_tabs devices
+python3 -m safari_tabs tabs --source icloud
 python3 -m safari_tabs tabs --source icloud --device 'My iPhone'
 python3 -m safari_tabs tabs --source icloud --device-id DEVICE_UUID --format urls
 ```
@@ -62,6 +63,28 @@ the mapping. This is not a guaranteed complete inventory of every Safari profile
 iCloud results describe a local sync cache, not the current state of a remote device. Named groups
 sync across devices and are not assigned to a device here. Remote window membership is not inferred.
 The CLI does not deduplicate records across sources: matching URLs are not proof of identical tabs.
+
+## Device discovery
+
+No device registration or configured device list is needed. Each iCloud query discovers all device
+records in the selected local cache, including devices with no cached tabs. New device records appear
+on the next query after Safari syncs them. Device names in examples are optional filters, not setup.
+Omit `--device` and `--device-id` to query tabs across all discovered devices; use a discovered ID when
+names are duplicated or change.
+
+This inventory covers the selected Safari cache, not every device associated with an Apple Account.
+Safari must be enabled in iCloud on devices using the same Apple Account, and results depend on what
+has synced to this Mac. Safari's Start Page also limits iCloud Tabs to the current profile; the adapter
+does not claim complete coverage across profiles. See Apple's [Safari sync setup](https://support.apple.com/guide/icloud/set-up-safari-mm5400ef10c4/icloud)
+and [profile behavior](https://support.apple.com/en-ie/105100).
+
+The CLI returns the full discovered inventory. MCP returns bounded pages with `total_matching` and
+`next_offset`; a first page is not necessarily the entire inventory. See [MCP usage](docs/MCP.md).
+
+Database paths are resolved relative to the current user's home directory. Device names and IDs come
+from runtime data; credentials and tunnel/account configuration belong outside the repository and
+the distributable plugin. Fixtures use synthetic data. The package's author and repository metadata
+identify the project, not the account or devices it queries.
 
 ## Output
 

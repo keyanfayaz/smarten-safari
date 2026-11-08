@@ -10,6 +10,7 @@ Only counts and method notes are recorded here; no real titles, URLs, database f
 | `python3 -m safari_tabs verify` | Window IDs, titles, URLs, and order matched; 4 windows / 28 tabs in about 1.4 seconds | Live verified |
 | CLI window-ID + title search | Returned the expected single title from a chosen window | Live verified |
 | Safari accessibility sidebar | Read all 8 tab names in an inactive named group without selecting it | UI experiment only; not implemented as a CLI adapter |
+| Safari iCloud Tabs popover | Read tab titles under synced phone and tablet headings | UI sample only; not a complete device inventory or CLI adapter |
 | `SafariTabs.db` and `CloudTabs.db` | Raw read attempts returned macOS `EPERM`, including outside the command sandbox | Live database validation blocked by access permissions |
 
 ## Repeating the window check
