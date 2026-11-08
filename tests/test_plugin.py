@@ -27,7 +27,7 @@ class PluginTests(unittest.TestCase):
             result = subprocess.run(["/bin/sh", str(plugin / "scripts/launch_mcp.sh")],
                                     input=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}) + "\n",
                                     capture_output=True, text=True, timeout=10, check=True)
-            self.assertEqual(len(json.loads(result.stdout)["result"]["tools"]), 3)
+            self.assertEqual(len(json.loads(result.stdout)["result"]["tools"]), 4)
             self.assertEqual(result.stderr, "")
             with self.assertRaises(FileExistsError):
                 build(output)

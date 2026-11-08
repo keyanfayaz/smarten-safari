@@ -11,6 +11,7 @@ python3 -m safari_tabs windows
 python3 -m safari_tabs tabs --source windows
 python3 -m safari_tabs tabs --source windows --window-id 42 --format titles
 python3 -m safari_tabs verify
+python3 -m safari_tabs doctor
 
 python3 -m safari_tabs groups
 python3 -m safari_tabs tabs --source groups --group 'Work' --format titles
@@ -111,6 +112,21 @@ newlines with spaces, and send warnings to stderr; JSON preserves original text.
 successful empty result. Source failures return status 1; invalid arguments return status 2.
 
 ## Access and local experiments
+
+Run `python3 -m safari_tabs doctor` to check all three sources in the current process context.
+It returns counts, availability, error codes, and coverage limits without printing browsing records.
+It exits with status 1 if any source is unavailable, while preserving the other sources' results.
+An available source means the reader succeeded; it does not establish complete coverage.
+
+File errors distinguish `permission_denied`, `database_missing`, `unsupported_schema`, and
+`database_unavailable`. On Python 3.11+, SQLite can also identify `database_busy` and `invalid_database`.
+An unstable live window read reports `unstable_session`; retry after Safari stops changing.
+
+Check permissions in the actual host that will run the reader. A terminal, coding app, and detached
+tunnel runtime can have different macOS grants. Full Disk Access is broader than Safari access;
+the software does not change it automatically. After an intentional permission change, rerun
+`doctor` in both the CLI host and the MCP runtime before claiming database support works.
+See [remaining implementation and validation work](docs/ROADMAP.md).
 
 Live window queries require macOS and may trigger the system Automation permission prompt for Safari.
 They do not require Safari's **Allow JavaScript from Apple Events** setting because the script does not

@@ -28,7 +28,7 @@ class MCPTests(unittest.TestCase):
                                         "params": {"protocolVersion": "2025-06-18"}})
             listed = mcp.dispatch({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
         self.assertEqual(initialized["result"]["protocolVersion"], "2025-06-18")
-        self.assertEqual(len(listed["result"]["tools"]), 3)
+        self.assertEqual(len(listed["result"]["tools"]), 4)
         self.assertTrue(all(tool["annotations"]["readOnlyHint"] for tool in listed["result"]["tools"]))
 
     def test_notifications_never_read(self):
@@ -113,7 +113,17 @@ class MCPTests(unittest.TestCase):
         with patch.dict(mcp.ADAPTERS, {"windows": fail}):
             result = self.request("read_safari_tabs")["result"]
         self.assertTrue(result["isError"])
-        self.assertNotIn("structuredContent", result)
+        self.assertEqual(result["structuredContent"]["error"]["code"], "source_unavailable")
+
+    def test_coverage_reports_partial_access(self):
+        def denied():
+            raise QueryError("Permission denied", "permission_denied")
+
+        with patch.dict(mcp.ADAPTERS, {"windows": self.snapshot, "groups": denied, "icloud": denied}):
+            result = self.request("get_safari_coverage")["result"]
+        self.assertFalse(result["isError"])
+        self.assertEqual(result["structuredContent"]["status"], "partial")
+        self.assertNotIn("Café", json.dumps(result))
 
     def test_protocol_errors(self):
         self.assertEqual(mcp.dispatch([])["error"]["code"], -32600)
@@ -135,7 +145,7 @@ class MCPTests(unittest.TestCase):
         results = [json.loads(line) for line in process.stdout.splitlines()]
         self.assertEqual(len(results), 3)
         self.assertEqual(results[0]["error"]["code"], -32700)
-        self.assertEqual(len(results[2]["result"]["tools"]), 3)
+        self.assertEqual(len(results[2]["result"]["tools"]), 4)
         self.assertEqual(process.stderr, "")
 
     def test_oversized_frame_terminates_without_echo(self):

@@ -3,8 +3,9 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 
-from safari_tabs.database import inspect_schema, open_database
+from safari_tabs.database import database_path, inspect_schema, open_database
 from safari_tabs.model import QueryError
 
 
@@ -15,10 +16,33 @@ class DatabaseTests(unittest.TestCase):
         self.path = Path(self.directory.name) / "tabs ? # ü.db"
 
     def test_missing_database_is_not_created(self):
-        with self.assertRaises(QueryError):
+        with self.assertRaises(QueryError) as caught:
             with open_database(self.path):
                 pass
+        self.assertEqual(caught.exception.code, "database_missing")
         self.assertFalse(self.path.exists())
+
+    def test_permission_denial_is_distinct_from_absent_database(self):
+        with patch.object(Path, "open", side_effect=PermissionError(1, "Operation not permitted")):
+            with self.assertRaises(QueryError) as caught:
+                with open_database(self.path):
+                    self.fail("Reader must not continue after denied access")
+        self.assertEqual(caught.exception.code, "permission_denied")
+
+    def test_discovery_does_not_hide_stat_permission_errors(self):
+        with patch.object(Path, "stat", side_effect=PermissionError(1, "Operation not permitted")):
+            with self.assertRaises(QueryError) as caught:
+                database_path("groups")
+        self.assertEqual(caught.exception.code, "permission_denied")
+
+    def test_unsupported_schema_has_distinct_code(self):
+        from safari_tabs.adapters import icloud
+
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute("CREATE TABLE unrelated (value TEXT)")
+        with self.assertRaises(QueryError) as caught:
+            icloud.read(self.path)
+        self.assertEqual(caught.exception.code, "unsupported_schema")
 
     def test_reads_wal_and_rejects_writes(self):
         writer = sqlite3.connect(self.path)

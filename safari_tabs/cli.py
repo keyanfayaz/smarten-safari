@@ -9,6 +9,7 @@ import sys
 from time import perf_counter
 
 from .adapters import groups, icloud, windows
+from .coverage import check as check_coverage
 from .database import inspect_schema
 from .model import QueryError
 from .verification import verify
@@ -23,6 +24,7 @@ def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description="Read Safari tabs using independent experimental adapters.")
     commands = root.add_subparsers(dest="command", required=True)
     commands.add_parser("verify", help="Cross-check live windows using JXA and AppleScript")
+    commands.add_parser("doctor", help="Check source availability and limits without printing browsing content")
     tabs = commands.add_parser("tabs", help="List tab titles, URLs, and source-local scope IDs")
     tabs.add_argument("--source", choices=ADAPTERS, default="windows")
     tabs.add_argument("--db", help="Explicit SQLite file (groups/icloud only)")
@@ -58,6 +60,10 @@ def main(argv: list[str] | None = None) -> int:
             if getattr(args, option) is not None and source != expected:
                 arguments.error(f"--{option.replace('_', '-')} requires --source {expected}")
     try:
+        if args.command == "doctor":
+            report = check_coverage(ADAPTERS)
+            print(json.dumps(report, indent=2))
+            return 0 if report["status"] == "available" else 1
         if args.command == "verify":
             print(json.dumps(verify(), indent=2))
             return 0
@@ -97,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(output, ensure_ascii=False, indent=2))
         return 0
     except QueryError as error:
-        print(f"error: {error}", file=sys.stderr)
+        print(f"error [{error.code}]: {error}", file=sys.stderr)
         return 1
 
 

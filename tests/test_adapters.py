@@ -118,6 +118,15 @@ class WindowsTests(unittest.TestCase):
                     windows.read()
 
     @patch("safari_tabs.adapters.windows.subprocess.run")
+    def test_changing_session_has_distinct_retryable_error(self, run):
+        run.side_effect = subprocess.CalledProcessError(
+            1, "osascript", stderr="Error: Safari tabs changed during collection; retry the query.")
+        with self.assertRaises(QueryError) as caught:
+            windows.read()
+        self.assertEqual(caught.exception.code, "unstable_session")
+        self.assertNotIn("permission", str(caught.exception).lower())
+
+    @patch("safari_tabs.adapters.windows.subprocess.run")
     def test_timeout(self, run):
         run.side_effect = subprocess.TimeoutExpired("osascript", 30)
         with self.assertRaisesRegex(QueryError, "30 seconds"):

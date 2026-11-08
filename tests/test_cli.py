@@ -79,6 +79,17 @@ class CLITests(unittest.TestCase):
         self.assertEqual(out, "")
         self.assertIn("Permission denied", error)
 
+    def test_doctor_prints_partial_report_and_returns_failure(self):
+        def denied():
+            raise QueryError("Permission denied", "permission_denied")
+
+        with patch.dict("safari_tabs.cli.ADAPTERS", {"windows": self.snapshot, "groups": denied, "icloud": denied}):
+            code, out, error = self.call("doctor")
+        self.assertEqual(code, 1)
+        self.assertEqual(error, "")
+        self.assertEqual(json.loads(out)["status"], "partial")
+        self.assertNotIn("Café", out)
+
     def test_module_entrypoint_reads_fixture_end_to_end(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "fixture.db"

@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 class QueryError(Exception):
     """A source cannot provide a reliable result."""
 
+    def __init__(self, message: str, code: str = "source_unavailable"):
+        super().__init__(message)
+        self.code = code
+
 
 @dataclass
 class Scope:

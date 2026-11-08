@@ -8,9 +8,9 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 SOURCES = (
-    "__init__.py", "model.py", "database.py", "verification.py", "mcp.py",
+    "__init__.py", "model.py", "database.py", "verification.py", "coverage.py", "mcp.py",
     "adapters/__init__.py", "adapters/groups.py", "adapters/icloud.py",
     "adapters/windows.py", "adapters/windows.js",
 )
