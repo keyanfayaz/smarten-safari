@@ -1,3 +1,4 @@
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -17,7 +18,7 @@ class SQLiteAdaptersTests(unittest.TestCase):
         self.path = Path(self.directory.name) / "fixture.db"
 
     def test_groups_exclude_closed_deleted_orphaned_and_cyclic_records(self):
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("""CREATE TABLE bookmarks (
                 id INTEGER PRIMARY KEY, parent INTEGER, type INTEGER, title TEXT,
                 url TEXT, deleted INTEGER, date_closed REAL, order_index INTEGER
@@ -52,7 +53,7 @@ class SQLiteAdaptersTests(unittest.TestCase):
         self.assertEqual(snapshot.tabs[2].title, 'Café\n"quoted"')
 
     def test_reduced_schema_reports_missing_lifecycle_columns(self):
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("CREATE TABLE bookmarks (id INTEGER, parent INTEGER, type INTEGER, title TEXT, url TEXT)")
             db.execute("INSERT INTO bookmarks VALUES (1, 0, 1, 'Empty', NULL)")
         snapshot = groups.read(self.path)
@@ -61,13 +62,13 @@ class SQLiteAdaptersTests(unittest.TestCase):
         self.assertTrue(any("date_closed column" in warning for warning in snapshot.warnings))
 
     def test_unknown_schema_fails_instead_of_reporting_no_tabs(self):
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("CREATE TABLE bookmarks (id INTEGER)")
         with self.assertRaisesRegex(QueryError, "Unsupported schema"):
             groups.read(self.path)
 
     def test_devices_preserve_empty_devices_duplicate_names_and_orphans(self):
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("CREATE TABLE cloud_tab_devices (device_uuid TEXT, device_name TEXT)")
             db.execute("CREATE TABLE cloud_tabs (tab_uuid TEXT, device_uuid TEXT, title TEXT, url TEXT, position INTEGER)")
             db.executemany("INSERT INTO cloud_tab_devices VALUES (?, ?)", [("a", "Phone"), ("b", "Phone")])
@@ -82,7 +83,7 @@ class SQLiteAdaptersTests(unittest.TestCase):
         self.assertTrue(any("metadata missing" in warning for warning in snapshot.warnings))
 
     def test_devices_support_schema_without_position(self):
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("CREATE TABLE cloud_tab_devices (device_uuid TEXT, device_name TEXT)")
             db.execute("CREATE TABLE cloud_tabs (tab_uuid TEXT, device_uuid TEXT, title TEXT, url TEXT)")
             db.execute("INSERT INTO cloud_tabs VALUES ('t', 'd', 'Title', 'https://example.test')")

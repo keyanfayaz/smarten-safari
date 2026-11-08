@@ -1,3 +1,4 @@
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -38,7 +39,7 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(writer.execute("SELECT COUNT(*) FROM example").fetchone()[0], 2)
 
     def test_schema_excludes_record_contents(self):
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             connection.execute("CREATE TABLE example (title TEXT)")
             connection.execute("INSERT INTO example VALUES ('PRIVATE TITLE')")
         result = inspect_schema("groups", self.path)

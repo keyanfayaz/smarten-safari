@@ -11,6 +11,7 @@ from time import perf_counter
 from .adapters import groups, icloud, windows
 from .database import inspect_schema
 from .model import QueryError
+from .verification import verify
 
 
 ADAPTERS = {"windows": windows.read, "groups": groups.read, "icloud": icloud.read}
@@ -21,6 +22,7 @@ def parser() -> argparse.ArgumentParser:
     """Describe source selection and reject unsupported filter combinations."""
     root = argparse.ArgumentParser(description="Read Safari tabs using independent experimental adapters.")
     commands = root.add_subparsers(dest="command", required=True)
+    commands.add_parser("verify", help="Cross-check live windows using JXA and AppleScript")
     tabs = commands.add_parser("tabs", help="List tab titles, URLs, and source-local scope IDs")
     tabs.add_argument("--source", choices=ADAPTERS, default="windows")
     tabs.add_argument("--db", help="Explicit SQLite file (groups/icloud only)")
@@ -45,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     """Print JSON by default; failures go to stderr and return a nonzero status."""
     arguments = parser()
     args = arguments.parse_args(argv)
-    source = args.source if args.command in ("tabs", "schema") else INVENTORIES[args.command]
+    source = args.source if args.command in ("tabs", "schema") else INVENTORIES.get(args.command)
     path = getattr(args, "db", None)
     if source == "windows" and path is not None:
         arguments.error("--db requires --source groups or icloud")
@@ -56,6 +58,9 @@ def main(argv: list[str] | None = None) -> int:
             if getattr(args, option) is not None and source != expected:
                 arguments.error(f"--{option.replace('_', '-')} requires --source {expected}")
     try:
+        if args.command == "verify":
+            print(json.dumps(verify(), indent=2))
+            return 0
         if args.command == "schema":
             print(json.dumps(inspect_schema(source, path), indent=2))
             return 0

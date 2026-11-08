@@ -9,7 +9,7 @@ from ..model import QueryError, Scope, Snapshot, Tab
 
 
 def read() -> Snapshot:
-    """Bulk-read titles and URLs per window in one bounded osascript process."""
+    """Require two matching observations within one bounded osascript process."""
     if sys.platform != "darwin":
         raise QueryError("The windows adapter requires macOS and Safari.")
     try:
@@ -33,7 +33,8 @@ def read() -> Snapshot:
             [Scope(**scope) for scope in data["scopes"]],
             [Tab(**tab) for tab in data["tabs"]],
             ["Only tabs exposed by each window's selected group are included. "
-             "Tab IDs are window:index values and may change after reordering; collection is not atomic."],
+             "Two consecutive observations matched, but collection is not atomic. "
+             "Tab IDs are window:index values and may change after reordering."],
         )
     except (ValueError, KeyError, TypeError) as error:
         raise QueryError("Safari automation returned an unexpected response.") from error

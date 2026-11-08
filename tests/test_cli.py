@@ -1,4 +1,4 @@
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import closing, redirect_stderr, redirect_stdout
 import io
 import json
 from pathlib import Path
@@ -82,7 +82,7 @@ class CLITests(unittest.TestCase):
     def test_module_entrypoint_reads_fixture_end_to_end(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "fixture.db"
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db, db:
                 db.execute("CREATE TABLE cloud_tab_devices (device_uuid TEXT, device_name TEXT)")
                 db.execute("CREATE TABLE cloud_tabs (tab_uuid TEXT, device_uuid TEXT, title TEXT, url TEXT)")
                 db.execute("INSERT INTO cloud_tab_devices VALUES ('phone-1', 'Phone')")

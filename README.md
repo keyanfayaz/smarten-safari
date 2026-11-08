@@ -7,6 +7,7 @@ Python 3.10+, no runtime dependencies. Run directly from this directory without 
 python3 -m safari_tabs windows
 python3 -m safari_tabs tabs --source windows
 python3 -m safari_tabs tabs --source windows --window-id 42 --format titles
+python3 -m safari_tabs verify
 
 python3 -m safari_tabs groups
 python3 -m safari_tabs tabs --source groups --group 'Work' --format titles
@@ -31,9 +32,17 @@ The default source for `tabs` is `windows`; source-specific filters require thei
 | `icloud` | Read-only SQLite query of `CloudTabs.db` | Cached tabs by synced device ID/name |
 
 The windows adapter makes one subprocess call and bulk-reads titles and URLs per window.
+It requires two consecutive matching observations within at most three samples, under a 30-second
+process timeout; count changes, navigation, or reordering must settle before a result is returned.
 It does not activate Safari, navigate tabs, or launch Safari if it is not running.
-Safari changes during collection can produce an error or a non-atomic observation; retry when needed.
+This detects observed instability but does not make Safari's scripting interface transactional.
+Safari changes during collection can produce an error; retry when needed.
 Window tab IDs are `window-id:position` and change when tabs are reordered.
+
+`verify` cross-checks window IDs, titles, URLs, and order using an independent AppleScript query between
+two JXA reads. It fails if the observations change or disagree, and reports counts and timing without
+printing titles or URLs. It does not validate saved groups or iCloud data.
+See [live experiment results](docs/experiments.md) for what has actually been verified.
 
 The database adapters use a read transaction and `mode=ro`; they do not execute writes or create
 missing databases. They read committed WAL data rather than using `immutable=1`, which can miss
@@ -113,9 +122,11 @@ python3 -m unittest discover -s tests -v
 ```
 
 Tests run offline on synthetic SQLite stores, including a live WAL transaction, and mock the macOS
-automation boundary. They cover lifecycle filtering, empty groups/devices, duplicate names, malformed
-schemas, Unicode, filters, errors, and the CLI entrypoint. They never query your browsing session.
-GitHub Actions runs the same suite on Python 3.10 and 3.14.
+automation boundary. On macOS, tests also execute the real JXA script with a fake Application object
+to exercise stable/unstable observations without contacting Safari. They cover lifecycle filtering,
+empty groups/devices, duplicate names, malformed schemas, Unicode, filters, verification failures,
+and the CLI entrypoint. They never query your browsing session.
+GitHub Actions runs Python 3.10 and 3.14 on Linux, plus Python 3.14 on macOS for the JXA tests.
 
 To add another collection method:
 
