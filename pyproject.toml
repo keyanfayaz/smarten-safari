@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "safari-tabs-lab"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lightweight, read-only experiments for querying Safari windows, tab groups, and iCloud tabs"
 requires-python = ">=3.10"
 dependencies = []
 
 [project.scripts]
 safari-tabs = "safari_tabs.cli:main"
+safari-tabs-mcp = "safari_tabs.mcp:main"
 
 [tool.setuptools.packages.find]
 include = ["safari_tabs*"]

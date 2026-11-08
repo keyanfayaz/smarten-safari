@@ -3,6 +3,9 @@
 A small, read-only CLI for experimenting with ways to query Safari tab titles and URLs.
 Python 3.10+, no runtime dependencies. Run directly from this directory without installing anything.
 
+For read-only MCP tools, an installable local plugin, and the private ChatGPT tunnel setup,
+see [MCP and plugin setup](docs/MCP.md).
+
 ```sh
 python3 -m safari_tabs windows
 python3 -m safari_tabs tabs --source windows
