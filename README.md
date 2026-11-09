@@ -1,21 +1,63 @@
 # Safari Tabs Lab
 
-A small, read-only CLI for experimenting with ways to query Safari tab titles and URLs.
-Python 3.10+, no runtime dependencies. Run directly from this directory without installing anything.
+A lightweight, read-only CLI and MCP server for querying Safari tab names and URLs across live Mac
+windows, saved tab groups, stored profiles, and the local iCloud Tabs cache.
+Python 3.10+, no runtime dependencies, no configured device list. Run directly from this directory.
 
-For read-only MCP tools, an installable local plugin, and the private ChatGPT tunnel setup,
-see [MCP and plugin setup](docs/MCP.md).
+Use it from a terminal, an installable local plugin, or a private ChatGPT connection through a Secure
+MCP Tunnel. The readers have been exercised against a live Safari installation and through ChatGPT;
+the database adapters remain experimental because Safari's private schema can change.
+
+[MCP and plugin setup](docs/MCP.md) · [Validation evidence](docs/experiments.md) · [Remaining work](docs/ROADMAP.md)
+
+## Coverage and limitations
+
+| Source | What you can query | What it does not establish |
+| --- | --- | --- |
+| `windows` | Live window IDs and each window's selected-group tabs: names, URLs, and order | Inactive groups, or a reliable mapping of live windows to named groups/profiles |
+| `groups` | Saved named groups, including inactive groups, their tabs, and stored profile assignments | Which device has a group open, complete profile/group-specific pinned-tab coverage, or compatibility with every Safari schema |
+| `profiles` | Stored profile IDs/names, named-group tabs, and filtering by profile | Every default/ungrouped or pinned tab belonging to a profile |
+| `session` | Stored window UUIDs, active group/profile relationships, privacy flags, and tabs | Live freshness or a mapping from stored window IDs to live Apple Events window IDs |
+| `icloud` | Automatically discovered device IDs/names/types and their cached tab names/URLs | Remote window boundaries, profile/group membership, exact sync freshness, or every Apple Account device |
+
+- **iCloud means device → cached tabs**, not device → profile → window/group → tabs.
+- **Groups and profiles describe this Mac's stored catalog**, which may contain synced groups; groups are not assigned to remote devices here.
+- **Sources overlap:** profile counts reuse named-group tabs, and local windows can also appear in the iCloud cache; do not sum counts into a unique total.
+- **Collection time is not sync time:** a read now does not prove a remote device synced now, and stored session records can lag live Safari.
+- **Private browsing is not excluded:** local readers may return private tabs; do not rely on this tool to filter them out.
+
+Run `doctor` or the MCP `get_safari_coverage` tool to check availability in the current host.
+"Available" means the read succeeded, not that every capability above is complete.
+
+## Quick start
+
+Live queries require macOS with Safari and Python 3.10+. Cloning requires repository access while
+this repository is private. No `pip install` is needed:
 
 ```sh
-python3 -m safari_tabs windows
-python3 -m safari_tabs tabs --source windows
-python3 -m safari_tabs tabs --source windows --window-id 42 --format titles
-python3 -m safari_tabs verify
+git clone https://github.com/keyanfayaz/safari-tabs-lab.git
+cd safari-tabs-lab
 python3 -m safari_tabs doctor
+python3 -m safari_tabs windows
+python3 -m safari_tabs tabs --source windows --format titles
+python3 -m safari_tabs verify
+```
+
+The first live-window query may prompt for Safari Automation access. Database readers may require
+Full Disk Access for the app running the command; see [access and local experiments](#access-and-local-experiments).
+An unavailable source is an error, not a claim that no tabs exist; other readers can still work.
+
+**URL defaults differ by interface:** CLI JSON includes URLs; use `--format titles` for names only.
+MCP omits URLs unless `include_urls: true`. Neither interface navigates, opens, moves, or closes tabs.
+
+## Query examples
+
+```sh
+python3 -m safari_tabs tabs --source windows --window-id WINDOW_ID --format titles
 
 python3 -m safari_tabs groups
 python3 -m safari_tabs tabs --source groups --group 'Work' --format titles
-python3 -m safari_tabs tabs --source groups --group-id 123 --search github
+python3 -m safari_tabs tabs --source groups --group-id GROUP_ID --search github
 python3 -m safari_tabs profiles
 python3 -m safari_tabs tabs --source groups --group 'Tools' --profile-id PROFILE_ID
 python3 -m safari_tabs session
@@ -27,20 +69,35 @@ python3 -m safari_tabs tabs --source icloud --device 'My iPhone'
 python3 -m safari_tabs tabs --source icloud --device-id DEVICE_UUID --format urls
 ```
 
-Use `windows`, `groups`, and `devices` to discover actual IDs and names before filtering.
+Use `windows`, `groups`, `devices`, `profiles`, and `session` to discover actual IDs and names before
+filtering; replace uppercase placeholders with returned IDs. Example names are illustrative filters.
 Names match exactly and may select multiple scopes; IDs disambiguate duplicate names.
 `--search` is a case-insensitive substring match over titles and URLs.
 The default source for `tabs` is `windows`; source-specific filters require their matching `--source`.
 
-## Methods
+## MCP and ChatGPT
 
-| Source | Method | What it can tell you |
-| --- | --- | --- |
-| `windows` | JXA through `osascript`, using Safari's Apple Events dictionary | Tabs exposed by each currently open window's selected group |
-| `groups` | Read-only SQLite query of `SafariTabs.db` | Named groups and their tabs, including inactive groups, with profile IDs on the observed profiled schema |
-| `icloud` | Read-only SQLite query of `CloudTabs.db` | Cached tabs by synced device ID/name |
-| `profiles` | Read-only query of stored profile relationships | Profile IDs/names and tabs in their named groups |
-| `session` | Read-only query of stored windows and active groups | Stored window UUIDs, active group/profile IDs, privacy flags, and stored tabs |
+| Tool | Purpose |
+| --- | --- |
+| `list_safari_scopes` | Discover windows, groups, devices, profiles, or stored windows with tab counts |
+| `read_safari_tabs` | Read/search tab names with exact scope and profile filters; URLs are opt-in |
+| `verify_safari_windows` | Compare live window observations through independent JXA and AppleScript reads |
+| `get_safari_coverage` | Report source availability, counts, errors, and limits without returning browsing records |
+
+All five sources are selectable through the list/read tools. Results default to 20 records and are
+capped at 50 per page; follow `next_offset` until `null` when requesting a complete inventory.
+
+For example, call `list_safari_scopes` with `{"source":"icloud"}`, then `read_safari_tabs` with
+`{"source":"icloud","scope_id":"RETURNED_DEVICE_ID","limit":20}`.
+
+See [MCP and plugin setup](docs/MCP.md) for stdio, portable local packaging, and the private ChatGPT
+tunnel. A local plugin alone does not provide web/mobile access: the Safari-hosting Mac and tunnel
+must be running. Automatic startup is a separate setup step, not installed by the package.
+
+## How the readers work
+
+`windows` uses JXA through `osascript` and Safari's Apple Events dictionary. `groups`, `profiles`, and
+`session` read `SafariTabs.db`; `icloud` reads `CloudTabs.db`.
 
 The windows adapter makes one subprocess call and bulk-reads titles and URLs per window.
 It requires two consecutive matching observations within at most three samples, under a 30-second
@@ -192,8 +249,8 @@ GitHub Actions runs Python 3.10 and 3.14 on Linux, plus Python 3.14 on macOS for
 To add another collection method:
 
 1. Add a module under `safari_tabs/adapters/` with `read()` returning `model.Snapshot`.
-2. Register it in `cli.ADAPTERS` and add the relevant CLI arguments/inventory mapping.
-3. Test against synthetic fixtures or a mocked system boundary; document what its IDs and freshness mean.
+2. Register it in `cli.ADAPTERS`, add relevant CLI inventory/filter mappings, and register it in `mcp.ADAPTERS` if exposing it through MCP.
+3. Add its limits to `coverage.LIMITATIONS` and test against synthetic fixtures or a mocked system boundary; document what its IDs and freshness mean.
 
 The adapters are ordinary Python functions and can also be called directly:
 
