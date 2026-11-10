@@ -8,7 +8,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "0.4.1"
+VERSION = "0.4.2"
 SOURCES = (
     "__init__.py", "model.py", "database.py", "verification.py", "coverage.py", "mcp.py",
     "adapters/__init__.py", "adapters/groups.py", "adapters/icloud.py", "adapters/catalog.py",
@@ -36,7 +36,7 @@ def build(output):
         shutil.copyfile(source, target)
         target.chmod(0o644)
     interface = {
-        "displayName": "My Safari Tabs", "shortDescription": "Read and search Safari tabs",
+        "displayName": "Smarten for Safari", "shortDescription": "Read and search Safari tabs",
         "longDescription": "Read Safari tab names by window, saved group, or synced device. "
                            "Read-only; URLs are optional. Saved group/device access depends on macOS permissions.",
         "developerName": "Keyan Fayaz", "category": "Productivity", "capabilities": ["Read"],
@@ -44,7 +44,7 @@ def build(output):
     }
     manifest = {"$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
                 "name": "safari-tabs", "version": VERSION, "description": interface["longDescription"],
-                "author": {"name": "Keyan Fayaz"}, "repository": "https://github.com/keyanfayaz/safari-tabs-lab",
+                "author": {"name": "Keyan Fayaz"}, "repository": "https://github.com/keyanfayaz/smarten-safari",
                 "extensions": {"com.openai": {"requires_local_executor": True, "interface": interface}}}
     mcp = {"$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json", "mcpServers": {
         "safari-tabs": {"type": "stdio", "command": "/bin/sh",
@@ -57,7 +57,7 @@ def build(output):
         "mcpServers": "./.mcp.json", "requires_local_executor": True, "interface": interface,
     })
     write_json(output / ".agents/plugins/marketplace.json", {
-        "name": "safari-local", "interface": {"displayName": "Safari Local"},
+        "name": "safari-local", "interface": {"displayName": "Smarten for Safari"},
         "plugins": [{"name": "safari-tabs", "source": {"source": "local", "path": "./plugins/safari-tabs"},
                      "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
                      "category": "Productivity"}],

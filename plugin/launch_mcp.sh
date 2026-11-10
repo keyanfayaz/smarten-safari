@@ -7,5 +7,5 @@ for PYTHON_BIN in /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/pyth
         exec "$PYTHON_BIN" -B -m safari_tabs.mcp
     fi
 done
-echo 'Safari Tabs requires an installed Python 3.10 or later.' >&2
+echo 'Smarten for Safari requires an installed Python 3.10 or later.' >&2
 exit 1

@@ -1,4 +1,4 @@
-# My Safari Tabs: MCP and plugin
+# Smarten for Safari: MCP and plugin
 
 The dependency-free MCP server uses stdio and exposes four read-only tools:
 
@@ -71,6 +71,9 @@ file-access requirements and experimental schema limitations.
 
 ## Portable local plugin
 
+The display name is **Smarten for Safari**. The existing `safari-tabs` plugin ID,
+`safari-local` marketplace ID, and archive name are retained for compatibility.
+
 ```sh
 python3 build_plugin.py
 codex plugin marketplace add /absolute/path/to/dist/safari-local
@@ -96,12 +99,15 @@ The tunnel must belong to the intended Platform organization and ChatGPT workspa
 1. Create or select the dedicated Safari tunnel in Platform, with the intended account/workspace access.
 2. Configure the installed `tunnel-client` with the verified tunnel ID, a runtime key reference, and the packaged launcher command.
 3. Run `doctor`, start the runtime, and verify health/readiness.
-4. In ChatGPT Plugins, add a custom MCP server named **My Safari Tabs**, choose **Tunnel**, and select that tunnel.
+4. In ChatGPT Plugins, add a custom MCP server named **Smarten for Safari**, choose **Tunnel**, and select that tunnel.
 5. Review the actual requested access, create/install the private plugin, and make a representative read.
 
 Keep this server's runtime configuration separate from any other MCP servers.
 A healthy tunnel or a local MCP test alone does not prove that ChatGPT is connected.
 Only report completion after discovery and a real tool call from the ChatGPT plugin succeed.
+
+For an existing ChatGPT connection, edit its display name to **Smarten for Safari**
+in place, retaining its plugin/App ID and tunnel association.
 
 When updating, build a new versioned package, verify it, and point the existing tunnel at its launcher.
 Keep the same tunnel, account/workspace scope, credential reference, and private audience.

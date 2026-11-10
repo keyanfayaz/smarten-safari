@@ -3,13 +3,15 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "safari-tabs-lab"
-version = "0.4.1"
-description = "Lightweight, read-only experiments for querying Safari windows, tab groups, and iCloud tabs"
+name = "smarten-safari"
+version = "0.4.2"
+description = "Smarten for Safari: read-only access to Safari windows, tab groups, and iCloud tabs"
 requires-python = ">=3.10"
 dependencies = []
 
 [project.scripts]
+smarten-safari = "safari_tabs.cli:main"
+smarten-safari-mcp = "safari_tabs.mcp:main"
 safari-tabs = "safari_tabs.cli:main"
 safari-tabs-mcp = "safari_tabs.mcp:main"
 

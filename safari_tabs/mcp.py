@@ -12,7 +12,7 @@ from .model import QueryError, scope_dict
 from .verification import verify
 
 
-VERSION = "0.4.1"
+VERSION = "0.4.2"
 PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26")
 ADAPTERS = {"windows": windows.read, "groups": groups.read, "icloud": icloud.read,
             "profiles": catalog.read_profiles, "session": catalog.read_session}
@@ -140,7 +140,7 @@ def dispatch(request):
     if method == "initialize":
         version = params.get("protocolVersion")
         result = {"protocolVersion": version if version in PROTOCOLS else PROTOCOLS[0],
-                  "capabilities": {"tools": {}}, "serverInfo": {"name": "safari-tabs", "version": VERSION},
+                  "capabilities": {"tools": {}}, "serverInfo": {"name": "safari-tabs", "title": "Smarten for Safari", "version": VERSION},
                   "instructions": INSTRUCTIONS}
     elif method == "ping":
         result = {}

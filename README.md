@@ -1,4 +1,6 @@
-# Safari Tabs Lab
+# Smarten for Safari
+
+*Your apps, connected to AI.*
 
 A lightweight, read-only CLI and MCP server for querying Safari tab names and URLs across live Mac
 windows, saved tab groups, stored profiles, and the local iCloud Tabs cache.
@@ -9,6 +11,18 @@ MCP Tunnel. The readers have been exercised against a live Safari installation a
 the database adapters remain experimental because Safari's private schema can change.
 
 [MCP and plugin setup](docs/MCP.md) · [Validation evidence](docs/experiments.md) · [Remaining work](docs/ROADMAP.md)
+
+## The Smarten family
+
+Smarten for Safari is part of **Smarten**, alongside
+[Smarten for Things](https://github.com/keyanfayaz/smarten-things).
+
+The `safari_tabs` Python module, `safari-tabs` / `safari-tabs-mcp` command aliases,
+plugin ID `safari-tabs`, and marketplace ID `safari-local` remain available for
+existing configurations.
+MCP discovery advertises the new display title while retaining its existing
+server and tool identifiers. An existing hosted connection must be renamed in
+its owning client; updating this repository does not change account-level names.
 
 ## Coverage and limitations
 
@@ -35,8 +49,8 @@ Live queries require macOS with Safari and Python 3.10+. Cloning requires reposi
 this repository is private. No `pip install` is needed:
 
 ```sh
-git clone https://github.com/keyanfayaz/safari-tabs-lab.git
-cd safari-tabs-lab
+git clone https://github.com/keyanfayaz/smarten-safari.git
+cd smarten-safari
 python3 -m safari_tabs doctor
 python3 -m safari_tabs windows
 python3 -m safari_tabs tabs --source windows --format titles
@@ -262,12 +276,12 @@ work = {scope.id for scope in snapshot.scopes if scope.name == 'Work'}
 titles = [tab.title for tab in snapshot.tabs if tab.scope_id in work]
 ```
 
-Optional installation into a virtual environment provides the `safari-tabs` command:
+Optional installation into a virtual environment provides the `smarten-safari` command:
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -e .
-.venv/bin/safari-tabs --help
+.venv/bin/smarten-safari --help
 ```
 
 Only optional packaging needs setuptools; running the module and tests needs the standard library alone.

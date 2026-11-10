@@ -23,7 +23,7 @@ INVENTORIES = {"windows": "windows", "groups": "groups", "devices": "icloud",
 
 def parser() -> argparse.ArgumentParser:
     """Describe source selection and reject unsupported filter combinations."""
-    root = argparse.ArgumentParser(description="Read Safari tabs using independent experimental adapters.")
+    root = argparse.ArgumentParser(description="Smarten for Safari: read Safari tabs using independent experimental adapters.")
     commands = root.add_subparsers(dest="command", required=True)
     commands.add_parser("verify", help="Cross-check live windows using JXA and AppleScript")
     commands.add_parser("doctor", help="Check source availability and limits without printing browsing content")
