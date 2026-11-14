@@ -45,8 +45,7 @@ Run `doctor` or the MCP `get_safari_coverage` tool to check availability in the 
 
 ## Quick start
 
-Live queries require macOS with Safari and Python 3.10+. Cloning requires repository access while
-this repository is private. No `pip install` is needed:
+Live queries require macOS with Safari and Python 3.10+. No `pip install` is needed:
 
 ```sh
 git clone https://github.com/keyanfayaz/smarten-safari.git
